@@ -329,10 +329,23 @@ function getContactVerificationServerErrorText() {
   return combined || 'OpenAI contact-verification page returned HTTP ERROR 500 after resend.';
 }
 
+function buildContactVerificationServerError(errorText = '') {
+  const serverErrorPrefix = typeof PHONE_RESEND_SERVER_ERROR_PREFIX === 'string'
+    ? PHONE_RESEND_SERVER_ERROR_PREFIX
+    : 'PHONE_RESEND_SERVER_ERROR::';
+  const resolvedText = String(errorText || '').trim()
+    || 'OpenAI contact-verification 页面返回 HTTP ERROR 500。';
+  return new Error(
+    resolvedText.startsWith(serverErrorPrefix)
+      ? resolvedText
+      : `${serverErrorPrefix}${resolvedText}`
+  );
+}
+
 function throwIfContactVerificationServerError() {
   const serverErrorText = getContactVerificationServerErrorText();
   if (serverErrorText) {
-    throw new Error(`${PHONE_RESEND_SERVER_ERROR_PREFIX}${serverErrorText}`);
+    throw buildContactVerificationServerError(serverErrorText);
   }
 }
 
@@ -4739,6 +4752,16 @@ function inspectSignupVerificationState() {
     };
   }
 
+  const contactVerificationServerErrorText = typeof getContactVerificationServerErrorText === 'function'
+    ? getContactVerificationServerErrorText()
+    : '';
+  if (contactVerificationServerErrorText) {
+    return {
+      state: 'contact_verification_server_error',
+      serverErrorText: contactVerificationServerErrorText,
+    };
+  }
+
   if (typeof isPhoneVerificationPageReady === 'function' && isPhoneVerificationPageReady()) {
     return {
       state: 'verification',
@@ -4782,6 +4805,7 @@ async function waitForSignupVerificationTransition(timeout = 5000) {
       snapshot.state === 'step5'
       || snapshot.state === 'logged_in_home'
       || snapshot.state === 'verification'
+      || snapshot.state === 'contact_verification_server_error'
       || snapshot.state === 'error'
       || snapshot.state === 'email_exists'
     ) {
@@ -4886,6 +4910,13 @@ async function prepareSignupVerificationFlow(payload = {}, timeout = 30000) {
 
     if (snapshot.state === 'email_exists') {
       throw new Error('当前邮箱已存在，需要重新开始新一轮。');
+    }
+
+    if (snapshot.state === 'contact_verification_server_error') {
+      const serverErrorText = String(snapshot.serverErrorText || '').trim()
+        || 'OpenAI contact-verification 页面返回 HTTP ERROR 500。';
+      log(`${prepareLogLabel}：检测到 contact-verification 500 错误页，当前轮直接报错。`, 'warn');
+      throw buildContactVerificationServerError(serverErrorText);
     }
 
     if (snapshot.state === 'error') {

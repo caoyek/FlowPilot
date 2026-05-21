@@ -372,6 +372,7 @@ function getActionText(element) { return element?.textContent || ''; }
 function getPageTextSnapshot() { return document.body.textContent; }
 
 ${extractFunction('getContactVerificationServerErrorText')}
+${extractFunction('buildContactVerificationServerError')}
 ${extractFunction('throwIfContactVerificationServerError')}
 ${extractFunction('resendVerificationCode')}
 
@@ -946,6 +947,52 @@ return {
   assert.equal(snapshot.targetChecks >= 1, true);
 });
 
+test('inspectSignupVerificationState recognizes contact-verification HTTP 500 as explicit server error state', () => {
+  const api = new Function(`
+const location = {
+  href: 'https://auth.openai.com/contact-verification',
+  pathname: '/contact-verification',
+};
+const document = {
+  title: "This page isn't working",
+  body: {
+    textContent: 'auth.openai.com is currently unable to handle this request. HTTP ERROR 500',
+    innerText: 'auth.openai.com is currently unable to handle this request. HTTP ERROR 500',
+  },
+  querySelector() { return null; },
+  querySelectorAll() { return []; },
+};
+const CONTACT_VERIFICATION_SERVER_ERROR_PATTERN = /this\\s+page\\s+isn['’]?t\\s+working|currently\\s+unable\\s+to\\s+handle\\s+this\\s+request|http\\s+error\\s+500|500\\s+internal\\s+server\\s+error/i;
+
+function isStep5Ready() { return false; }
+function isSignupProfilePageUrl() { return false; }
+function isLikelyLoggedInChatgptHomeUrl() { return false; }
+function isSignupPasswordErrorPage() { return false; }
+function getSignupPasswordTimeoutErrorPageState() { return null; }
+function isPhoneVerificationPageReady() { return false; }
+function isVerificationPageStillVisible() { return false; }
+function isSignupEmailAlreadyExistsPage() { return false; }
+function getSignupPasswordInput() { return null; }
+function getSignupPasswordSubmitButton() { return null; }
+function getSignupPasswordFieldErrorText() { return ''; }
+function getPageTextSnapshot() { return document.body.textContent; }
+
+${extractFunction('getContactVerificationServerErrorText')}
+${extractFunction('getStep4PostVerificationState')}
+${extractFunction('inspectSignupVerificationState')}
+
+return {
+  run() {
+    return inspectSignupVerificationState();
+  },
+};
+`)();
+
+  const result = api.run();
+  assert.equal(result.state, 'contact_verification_server_error');
+  assert.match(result.serverErrorText, /HTTP ERROR 500/i);
+});
+
 test('prepareSignupVerificationFlow stops immediately when password page shows phone/password mismatch', async () => {
   const api = new Function(`
 const logs = [];
@@ -1033,6 +1080,94 @@ return {
   assert.match(result.error, /SIGNUP_PHONE_PASSWORD_MISMATCH::Incorrect phone number or password/);
   assert.equal(result.clicks.length, 0);
   assert.equal(result.logs.some(({ message }) => /检测到密码页报错/.test(message)), true);
+});
+
+test('prepareSignupVerificationFlow stops immediately when page lands on contact-verification HTTP 500', async () => {
+  const api = new Function(`
+const logs = [];
+let now = 0;
+const PHONE_RESEND_SERVER_ERROR_PREFIX = 'PHONE_RESEND_SERVER_ERROR::';
+const CONTACT_VERIFICATION_SERVER_ERROR_PATTERN = /this\\s+page\\s+isn['’]?t\\s+working|currently\\s+unable\\s+to\\s+handle\\s+this\\s+request|http\\s+error\\s+500|500\\s+internal\\s+server\\s+error/i;
+
+Date.now = () => now;
+
+function throwIfStopped() {}
+function log(message, level = 'info') { logs.push({ message, level }); }
+async function sleep(ms = 0) { now += ms || 200; }
+function isVisibleElement() { return true; }
+function isActionEnabled() { return true; }
+function getActionText(el) { return el?.textContent || ''; }
+function getCurrentAuthRetryPageState() { return null; }
+function isPhoneVerificationPageReady() { return false; }
+function findResendVerificationCodeTrigger() { return null; }
+function isEmailVerificationPage() { return false; }
+function getPageTextSnapshot() { return document.body.textContent; }
+function getVerificationCodeTarget() { return null; }
+function is405MethodNotAllowedPage() { return false; }
+async function recoverCurrentAuthRetryPage() {}
+function createSignupUserAlreadyExistsError() { return new Error('user already exists'); }
+function getSignupPasswordInput() { return null; }
+function getSignupPasswordSubmitButton() { return null; }
+function isSignupEmailAlreadyExistsPage() { return false; }
+function isSignupPasswordErrorPage() { return false; }
+function getSignupPasswordTimeoutErrorPageState() { return null; }
+function isStep5Ready() { return false; }
+function humanPause() {}
+function fillInput() {}
+function logSignupPasswordDiagnostics() {}
+function createSignupPhonePasswordMismatchError(detailText = '') {
+  return new Error('SIGNUP_PHONE_PASSWORD_MISMATCH::' + detailText);
+}
+
+const location = {
+  href: 'https://auth.openai.com/contact-verification',
+  pathname: '/contact-verification',
+};
+const document = {
+  readyState: 'complete',
+  title: "This page isn't working",
+  body: {
+    textContent: 'auth.openai.com is currently unable to handle this request. HTTP ERROR 500',
+    innerText: 'auth.openai.com is currently unable to handle this request. HTTP ERROR 500',
+  },
+  querySelector() {
+    return null;
+  },
+  querySelectorAll() {
+    return [];
+  },
+};
+
+${extractFunction('getContactVerificationServerErrorText')}
+${extractFunction('buildContactVerificationServerError')}
+${extractFunction('isSignupVerificationPageInteractiveReady')}
+${extractFunction('isVerificationPageStillVisible')}
+${extractFunction('isSignupProfilePageUrl')}
+${extractFunction('isLikelyLoggedInChatgptHomeUrl')}
+${extractFunction('getStep4PostVerificationState')}
+${extractFunction('inspectSignupVerificationState')}
+${extractFunction('waitForSignupVerificationTransition')}
+${extractFunction('prepareSignupVerificationFlow')}
+
+return {
+  async run() {
+    try {
+      await prepareSignupVerificationFlow({
+        prepareLogLabel: '步骤 4 执行',
+      }, 10000);
+      return { threw: false, logs };
+    } catch (error) {
+      return { threw: true, error: error.message, logs };
+    }
+  },
+};
+`)();
+
+  const result = await api.run();
+
+  assert.equal(result.threw, true);
+  assert.match(result.error, /^PHONE_RESEND_SERVER_ERROR::This page isn't working/);
+  assert.equal(result.logs.some(({ message }) => /contact-verification 500 错误页/.test(message)), true);
 });
 
 test('prepareSignupVerificationFlow stops immediately when password page shows phone already exists error', async () => {
