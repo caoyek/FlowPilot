@@ -18,7 +18,8 @@
     "cookies",
     "storage",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "downloads"
   ],
   "host_permissions": [
     "https://*.icloud.com/*",

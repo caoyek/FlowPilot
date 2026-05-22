@@ -720,55 +720,56 @@
       return String(result?.checkoutUrl || '').trim();
     }
 
+    async function downloadCheckoutLink(state, checkoutUrl) {
+      if (!chrome?.downloads?.download) return;
+      const accountEmail = String(state?.accountEmail || state?.email || '').trim() || 'unknown';
+      const link = String(checkoutUrl || '').trim();
+      if (!link) return;
+      try {
+        const payload = {
+          account: accountEmail,
+          checkoutLink: link,
+          timestamp: new Date().toISOString()
+        };
+        const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+        const filename = `checkout_${accountEmail.replace(/[^a-zA-Z0-9_-]/g, '_')}_${Date.now()}.json`;
+        await chrome.downloads.download({
+          url: dataStr,
+          filename: filename,
+          saveAs: false
+        });
+      } catch (e) {
+        await addLog('步骤 6：记录 checkout 链接失败：' + (e?.message || e), 'warn');
+      }
+    }
+
     async function executeHostedCheckoutCreate(tabId, state = {}, result = {}) {
       const targetCheckoutUrl = resolveCheckoutTargetUrl(result, PLUS_PAYMENT_METHOD_PAYPAL_HOSTED);
       if (!targetCheckoutUrl) {
         throw new Error('步骤 6：PayPal 无卡直绑未返回可用的订阅链接。');
       }
 
-      await addLog('步骤 6：PayPal 无卡直绑链接已创建，正在打开并提交 OpenAI Checkout 页面...', 'ok');
-      await chrome.tabs.update(tabId, { url: targetCheckoutUrl, active: true });
-      await waitForTabCompleteUntilStopped(tabId);
+      await addLog('步骤 6：PayPal 无卡直绑链接已创建，生成链接并下载，不打开页面。', 'ok');
 
-      const landedTab = await waitForUrlMatch(
-        tabId,
-        (url) => isHostedOpenAiCheckoutUrl(url) || isPayPalUrl(url) || isHostedCheckoutSuccessUrl(url),
-        HOSTED_CHECKOUT_TRANSITION_TIMEOUT_MS,
-        500
-      );
-      const landedUrl = String(landedTab?.url || targetCheckoutUrl || '').trim();
-      let completedUrl = landedUrl;
-
-      if (isHostedOpenAiCheckoutUrl(completedUrl)) {
-        const { profile, config } = await ensureHostedGuestProfile(state);
-        await addLog(`步骤 6：正在提交 OpenAI Checkout，等待跳转到 PayPal 邮箱页（电话使用本地号码 ${profile.phone}）。`, 'info');
-        completedUrl = String(await runHostedOpenAiCheckout(tabId, profile, config) || await getHostedCurrentUrl(tabId) || '').trim();
-      }
-
-      if (isPayPalUrl(completedUrl)) {
-        await waitForTabCompleteUntilStopped(tabId).catch(() => {});
-      }
-
-      const isAlreadySuccessful = isHostedCheckoutSuccessUrl(completedUrl);
       await setState({
         plusCheckoutTabId: tabId,
-        plusCheckoutUrl: completedUrl,
+        plusCheckoutUrl: targetCheckoutUrl,
         plusCheckoutCountry: result.country || 'US',
         plusCheckoutCurrency: result.currency || 'USD',
         plusCheckoutSource: PLUS_PAYMENT_METHOD_PAYPAL_HOSTED,
-        plusReturnUrl: isAlreadySuccessful ? completedUrl : '',
-        plusHostedCheckoutCompleted: isAlreadySuccessful,
+        plusReturnUrl: '',
+        plusHostedCheckoutCompleted: false,
       });
 
-      await addLog(`步骤 6：PayPal 无卡直绑已提交 OpenAI Checkout（${result.country || 'US'} ${result.currency || 'USD'}），准备进入 PayPal 邮箱页。`, 'info');
+      await downloadCheckoutLink(state, targetCheckoutUrl);
 
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'US',
         plusCheckoutCurrency: result.currency || 'USD',
         plusCheckoutSource: PLUS_PAYMENT_METHOD_PAYPAL_HOSTED,
-        plusCheckoutUrl: completedUrl,
-        plusReturnUrl: isAlreadySuccessful ? completedUrl : '',
-        plusHostedCheckoutCompleted: isAlreadySuccessful,
+        plusCheckoutUrl: targetCheckoutUrl,
+        plusReturnUrl: '',
+        plusHostedCheckoutCompleted: false,
       });
     }
 
@@ -1421,15 +1422,7 @@
         return;
       }
 
-      await addLog(`步骤 6：${checkoutModeLabel}已创建，正在打开订阅页面...`, 'ok');
-      await chrome.tabs.update(tabId, { url: targetCheckoutUrl, active: true });
-      await waitForTabCompleteUntilStopped(tabId);
-      await sleepWithStop(1000);
-      await ensureContentScriptReadyOnTabUntilStopped(PLUS_CHECKOUT_SOURCE, tabId, {
-        inject: PLUS_CHECKOUT_INJECT_FILES,
-        injectSource: PLUS_CHECKOUT_SOURCE,
-        logMessage: '步骤 6：正在等待订阅页面完成加载...',
-      });
+      await addLog(`步骤 6：${checkoutModeLabel}已创建，生成链接并下载，不打开页面。`, 'ok');
 
       await setState({
         plusCheckoutTabId: tabId,
@@ -1439,7 +1432,7 @@
         plusCheckoutSource: '',
       });
 
-      await addLog(`步骤 6：Plus Checkout 页面已就绪（${paymentMethodLabel} / ${result.country || 'DE'} ${result.currency || 'EUR'}），准备继续下一步。`, 'info');
+      await downloadCheckoutLink(state, targetCheckoutUrl);
 
       await completeNodeFromBackground('plus-checkout-create', {
         plusCheckoutCountry: result.country || 'DE',
