@@ -6841,6 +6841,9 @@ function installStep5NavigationCompletionReporter(completeOnce) {
     debugLog(`检测到页面开始导航（event=${eventType}）。`, {
       level: 'warn',
     });
+    if (typeof completeOnce === 'function') {
+      completeOnce({ navigationStarted: true, navigationEventType: eventType });
+    }
   };
 
   window.addEventListener('pagehide', onNavigationStarted, { once: true });
