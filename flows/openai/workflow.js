@@ -574,6 +574,16 @@
         "driverId": "flows/openai/content/plus-checkout",
         "command": "plus-checkout-create",
         "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "sub2api-session-import",
+        "title": "导入当前 ChatGPT 会话到 SUB2API",
+        "sourceId": "sub2api-panel",
+        "driverId": "flows/openai/background/steps/sub2api-session-import",
+        "command": "sub2api-session-import",
+        "flowId": "openai"
       }
     ],
     "plusPaypalCpaSession": [
@@ -636,6 +646,16 @@
         "sourceId": "plus-checkout",
         "driverId": "flows/openai/content/plus-checkout",
         "command": "plus-checkout-create",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "cpa-session-import",
+        "title": "导入当前 ChatGPT 会话到 CPA",
+        "sourceId": "vps-panel",
+        "driverId": "flows/openai/background/steps/cpa-session-import",
+        "command": "cpa-session-import",
         "flowId": "openai"
       }
     ],
@@ -941,14 +961,43 @@
         "flowId": "openai"
       },
       {
-        "id": 12,
-        "order": 120,
-        "key": "fetch-login-code",
-        "title": "获取登录验证码",
-        "sourceId": "openai-auth",
-        "driverId": "flows/openai/content/openai-auth",
-        "command": "submit-verification-code",
-        "mailRuleId": "openai-login-code",
+        "id": 7,
+        "order": 70,
+        "key": "paypal-hosted-email",
+        "title": "无卡直绑填写 PayPal 邮箱",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-email",
+        "flowId": "openai"
+      },
+      {
+        "id": 8,
+        "order": 80,
+        "key": "paypal-hosted-card",
+        "title": "无卡直绑填写 PayPal 资料",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-card",
+        "flowId": "openai"
+      },
+      {
+        "id": 9,
+        "order": 90,
+        "key": "paypal-hosted-create-account",
+        "title": "无卡直绑确认创建 PayPal",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-create-account",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "paypal-hosted-review",
+        "title": "无卡直绑完成 PayPal 授权",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-review",
         "flowId": "openai"
       },
       {
@@ -1033,6 +1082,56 @@
         "driverId": "flows/openai/content/plus-checkout",
         "command": "plus-checkout-create",
         "flowId": "openai"
+      },
+      {
+        "id": 7,
+        "order": 70,
+        "key": "paypal-hosted-email",
+        "title": "无卡直绑填写 PayPal 邮箱",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-email",
+        "flowId": "openai"
+      },
+      {
+        "id": 8,
+        "order": 80,
+        "key": "paypal-hosted-card",
+        "title": "无卡直绑填写 PayPal 资料",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-card",
+        "flowId": "openai"
+      },
+      {
+        "id": 9,
+        "order": 90,
+        "key": "paypal-hosted-create-account",
+        "title": "无卡直绑确认创建 PayPal",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-create-account",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "paypal-hosted-review",
+        "title": "无卡直绑完成 PayPal 授权",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-review",
+        "flowId": "openai"
+      },
+      {
+        "id": 11,
+        "order": 110,
+        "key": "sub2api-session-import",
+        "title": "导入当前 ChatGPT 会话到 SUB2API",
+        "sourceId": "sub2api-panel",
+        "driverId": "flows/openai/background/steps/sub2api-session-import",
+        "command": "sub2api-session-import",
+        "flowId": "openai"
       }
     ],
     "plusPaypalHostedCpaSession": [
@@ -1095,6 +1194,56 @@
         "sourceId": "plus-checkout",
         "driverId": "flows/openai/content/plus-checkout",
         "command": "plus-checkout-create",
+        "flowId": "openai"
+      },
+      {
+        "id": 7,
+        "order": 70,
+        "key": "paypal-hosted-email",
+        "title": "无卡直绑填写 PayPal 邮箱",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-email",
+        "flowId": "openai"
+      },
+      {
+        "id": 8,
+        "order": 80,
+        "key": "paypal-hosted-card",
+        "title": "无卡直绑填写 PayPal 资料",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-card",
+        "flowId": "openai"
+      },
+      {
+        "id": 9,
+        "order": 90,
+        "key": "paypal-hosted-create-account",
+        "title": "无卡直绑确认创建 PayPal",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-create-account",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "paypal-hosted-review",
+        "title": "无卡直绑完成 PayPal 授权",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-review",
+        "flowId": "openai"
+      },
+      {
+        "id": 11,
+        "order": 110,
+        "key": "cpa-session-import",
+        "title": "导入当前 ChatGPT 会话到 CPA",
+        "sourceId": "vps-panel",
+        "driverId": "flows/openai/background/steps/cpa-session-import",
+        "command": "cpa-session-import",
         "flowId": "openai"
       }
     ],
@@ -1161,14 +1310,43 @@
         "flowId": "openai"
       },
       {
-        "id": 12,
-        "order": 120,
-        "key": "fetch-login-code",
-        "title": "获取登录验证码",
-        "sourceId": "openai-auth",
-        "driverId": "flows/openai/content/openai-auth",
-        "command": "submit-verification-code",
-        "mailRuleId": "openai-login-code",
+        "id": 7,
+        "order": 70,
+        "key": "paypal-hosted-email",
+        "title": "无卡直绑填写 PayPal 邮箱",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-email",
+        "flowId": "openai"
+      },
+      {
+        "id": 8,
+        "order": 80,
+        "key": "paypal-hosted-card",
+        "title": "无卡直绑填写 PayPal 资料",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-card",
+        "flowId": "openai"
+      },
+      {
+        "id": 9,
+        "order": 90,
+        "key": "paypal-hosted-create-account",
+        "title": "无卡直绑确认创建 PayPal",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-create-account",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "paypal-hosted-review",
+        "title": "无卡直绑完成 PayPal 授权",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-review",
         "flowId": "openai"
       },
       {
@@ -1276,14 +1454,43 @@
         "flowId": "openai"
       },
       {
-        "id": 12,
-        "order": 120,
-        "key": "fetch-login-code",
-        "title": "获取登录验证码",
-        "sourceId": "openai-auth",
-        "driverId": "flows/openai/content/openai-auth",
-        "command": "submit-verification-code",
-        "mailRuleId": "openai-login-code",
+        "id": 7,
+        "order": 70,
+        "key": "paypal-hosted-email",
+        "title": "无卡直绑填写 PayPal 邮箱",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-email",
+        "flowId": "openai"
+      },
+      {
+        "id": 8,
+        "order": 80,
+        "key": "paypal-hosted-card",
+        "title": "无卡直绑填写 PayPal 资料",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-card",
+        "flowId": "openai"
+      },
+      {
+        "id": 9,
+        "order": 90,
+        "key": "paypal-hosted-create-account",
+        "title": "无卡直绑确认创建 PayPal",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-create-account",
+        "flowId": "openai"
+      },
+      {
+        "id": 10,
+        "order": 100,
+        "key": "paypal-hosted-review",
+        "title": "无卡直绑完成 PayPal 授权",
+        "sourceId": "paypal-flow",
+        "driverId": "flows/openai/content/paypal-flow",
+        "command": "paypal-hosted-review",
         "flowId": "openai"
       },
       {
