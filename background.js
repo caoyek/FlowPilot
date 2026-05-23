@@ -3983,7 +3983,7 @@ function buildAutoRunFreshResetSettingsState(prevState = {}, activeFlowId = DEFA
   return mergeAutoRunKeepStateValue(currentSettingsState, nextSettingsStatePatch);
 }
 
-function buildFreshAutoRunKeepState(prevState = {}) {
+function buildFreshAutoRunKeepState(prevState = {}, context = {}) {
   const sourceState = isPlainObjectValue(prevState) ? prevState : {};
   const activeFlowId = self.MultiPageFlowRegistry?.normalizeFlowId
     ? self.MultiPageFlowRegistry.normalizeFlowId(
@@ -4008,6 +4008,13 @@ function buildFreshAutoRunKeepState(prevState = {}) {
       continue;
     }
     keepState[key] = value;
+  }
+
+  if (!context?.keepSameEmailUntilAddPhone) {
+    keepState.email = null;
+    keepState.registrationEmailState = { ...DEFAULT_REGISTRATION_EMAIL_STATE };
+    keepState.currentHotmailAccountId = null;
+    keepState.currentMail2925AccountId = null;
   }
 
   keepState.activeFlowId = activeFlowId;

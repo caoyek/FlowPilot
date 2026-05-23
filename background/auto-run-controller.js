@@ -595,6 +595,7 @@
                 totalRuns,
                 attemptRun,
                 sessionId,
+                keepSameEmailUntilAddPhone,
               }),
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               autoRunSessionId: sessionId,
