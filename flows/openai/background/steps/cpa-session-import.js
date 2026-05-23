@@ -233,6 +233,42 @@
       };
     }
 
+    async function downloadSessionJsonLocally(state, sessionState, visibleStep) {
+      if (!chrome?.downloads?.download) {
+        await addStepLog(visibleStep, '浏览器不支持下载 API，跳过本地 JSON 保存。', 'warn');
+        return;
+      }
+      try {
+        const accountInfo = normalizeString(state?.email || state?.account || 'unknown_account').replace(/[^a-zA-Z0-9_@.-]/g, '_');
+        const filename = `chatgpt_session_${accountInfo}_${Date.now()}.json`;
+        const payload = JSON.stringify({
+          ...state,
+          ...sessionState,
+          timestamp: new Date().toISOString()
+        }, null, 2);
+        
+        const payloadBase64 = btoa(unescape(encodeURIComponent(payload)));
+        const dataUrl = `data:application/json;base64,${payloadBase64}`;
+        
+        await new Promise((resolve, reject) => {
+          chrome.downloads.download({
+            url: dataUrl,
+            filename: filename,
+            saveAs: false
+          }, (downloadId) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(downloadId);
+            }
+          });
+        });
+        await addStepLog(visibleStep, `已成功下载 ChatGPT 会话 JSON 到本地：${filename}`, 'ok');
+      } catch (err) {
+        await addStepLog(visibleStep, `本地下载 JSON 失败：${err.message || err}`, 'warn');
+      }
+    }
+
     async function executeCpaSessionImport(state = {}) {
       throwIfStopped();
       const visibleStep = resolveVisibleStep(state);
@@ -248,6 +284,8 @@
       await addStepLog(visibleStep, '正在读取当前 ChatGPT 登录会话...', 'info');
       const sessionState = await readCurrentChatGptSession(tab.id, visibleStep);
       throwIfStopped();
+
+      await downloadSessionJsonLocally(state, sessionState, visibleStep);
 
       const result = await api.importCurrentChatGptSession({
         ...state,
