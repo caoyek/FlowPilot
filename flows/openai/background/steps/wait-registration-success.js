@@ -124,7 +124,27 @@
           }
         }
 
-        if (chromeApi.browsingData?.removeCookies) {
+        if (chromeApi.browsingData?.remove) {
+          try {
+            await chromeApi.browsingData.remove({
+              since: 0,
+              origins: STEP6_COOKIE_CLEAR_ORIGINS,
+            }, {
+              "appcache": true,
+              "cache": true,
+              "cacheStorage": true,
+              "cookies": true,
+              "fileSystems": true,
+              "indexedDB": true,
+              "localStorage": true,
+              "serviceWorkers": true,
+              "webSQL": true
+            });
+            await addLog(`步骤 6：已彻底清理 ${STEP6_COOKIE_CLEAR_ORIGINS.length} 个域名的全部缓存（Cookies / LocalStorage / IndexedDB / ServiceWorkers）。`, 'info');
+          } catch (error) {
+            await addLog(`步骤 6：browsingData 深度清理失败：${getErrorMessage(error)}`, 'warn');
+          }
+        } else if (chromeApi.browsingData?.removeCookies) {
           try {
             await chromeApi.browsingData.removeCookies({
               since: 0,

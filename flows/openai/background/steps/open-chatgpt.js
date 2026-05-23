@@ -141,6 +141,44 @@
         }
       }
 
+      const STEP1_COOKIE_CLEAR_ORIGINS = [
+        'https://chatgpt.com',
+        'https://chat.openai.com',
+        'https://auth.openai.com',
+        'https://auth0.openai.com',
+        'https://accounts.openai.com',
+      ];
+
+      if (chromeApi.browsingData?.remove) {
+        try {
+          await chromeApi.browsingData.remove({
+            since: 0,
+            origins: STEP1_COOKIE_CLEAR_ORIGINS,
+          }, {
+            "appcache": true,
+            "cache": true,
+            "cacheStorage": true,
+            "cookies": true,
+            "fileSystems": true,
+            "indexedDB": true,
+            "localStorage": true,
+            "serviceWorkers": true,
+            "webSQL": true
+          });
+        } catch (error) {
+          await addLog(`步骤 1：browsingData 深度清理失败：${getStep1ErrorMessage(error)}`, 'warn');
+        }
+      } else if (chromeApi.browsingData?.removeCookies) {
+        try {
+          await chromeApi.browsingData.removeCookies({
+            since: 0,
+            origins: STEP1_COOKIE_CLEAR_ORIGINS,
+          });
+        } catch (error) {
+          await addLog(`步骤 1：browsingData 补扫 cookies 失败：${getStep1ErrorMessage(error)}`, 'warn');
+        }
+      }
+
       const elapsedMs = Date.now() - startedAt;
       await addLog(`步骤 1：已清理 ${removedCount} 个 ChatGPT / OpenAI cookies（耗时 ${elapsedMs}ms）。`, 'ok');
     }

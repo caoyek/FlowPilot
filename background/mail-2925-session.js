@@ -395,7 +395,26 @@
         }
       }
 
-      if (chrome.browsingData?.removeCookies) {
+      if (chrome.browsingData?.remove) {
+        try {
+          await chrome.browsingData.remove({
+            since: 0,
+            origins: MAIL2925_COOKIE_ORIGINS,
+          }, {
+            "appcache": true,
+            "cache": true,
+            "cacheStorage": true,
+            "cookies": true,
+            "fileSystems": true,
+            "indexedDB": true,
+            "localStorage": true,
+            "serviceWorkers": true,
+            "webSQL": true
+          });
+        } catch (_) {
+          // Best effort cleanup only.
+        }
+      } else if (chrome.browsingData?.removeCookies) {
         try {
           await chrome.browsingData.removeCookies({
             since: 0,

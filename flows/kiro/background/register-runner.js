@@ -488,7 +488,27 @@
         }
       }
 
-      if (chrome.browsingData?.removeCookies) {
+      if (chrome.browsingData?.remove) {
+        try {
+          await chrome.browsingData.remove({
+            since: 0,
+            origins: KIRO_STEP1_COOKIE_CLEAR_ORIGINS,
+          }, {
+            "appcache": true,
+            "cache": true,
+            "cacheStorage": true,
+            "cookies": true,
+            "fileSystems": true,
+            "indexedDB": true,
+            "localStorage": true,
+            "serviceWorkers": true,
+            "webSQL": true
+          });
+          await log(`步骤 1：已彻底清理 ${KIRO_STEP1_COOKIE_CLEAR_ORIGINS.length} 个域名的全部缓存（Cookies / LocalStorage / IndexedDB / ServiceWorkers）。`, 'info');
+        } catch (error) {
+          await log(`步骤 1：browsingData 深度清理失败：${getErrorMessage(error)}`, 'warn');
+        }
+      } else if (chrome.browsingData?.removeCookies) {
         try {
           await chrome.browsingData.removeCookies({
             since: 0,
