@@ -571,6 +571,14 @@
 
           if (reuseExistingProgress) {
             let currentState = attemptState;
+            // 强一致性判定：如果是跨轮次启动（例如上一次运行的是前一轮，当前要开启新的一轮），绝对不能复用上一轮残留的状态进度，强制作为全新启动
+            if (currentState && currentState.autoRunCurrentRun && currentState.autoRunCurrentRun !== targetRun) {
+              reuseExistingProgress = false;
+            }
+          }
+
+          if (reuseExistingProgress) {
+            let currentState = attemptState;
             if (getRunningWorkflowNodes(currentState).length) {
               currentState = await waitForRunningWorkflowNodesToFinish({
                 currentRun: targetRun,
