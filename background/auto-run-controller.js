@@ -589,6 +589,39 @@
 
           if (!useExistingProgress) {
             const prevState = attemptState;
+
+            // 1. 关闭之前的无痕窗口（如果有保存的 automationWindowId）
+            const prevWindowId = prevState?.automationWindowId;
+            if (prevWindowId && deps.chrome?.windows?.remove) {
+              try {
+                await addLog(`正在关闭上一轮的窗口 (ID: ${prevWindowId})...`, 'info');
+                await deps.chrome.windows.remove(Number(prevWindowId));
+              } catch (windowRemoveErr) {
+                console.warn('Failed to close previous window:', windowRemoveErr);
+              }
+            }
+
+            // 2. 创建一个新的无痕窗口
+            let newWindowId = null;
+            if (deps.chrome?.windows?.create) {
+              try {
+                await addLog('正在创建新的无痕窗口...', 'info');
+                const newWindow = await deps.chrome.windows.create({
+                  incognito: true,
+                  focused: true
+                });
+                newWindowId = newWindow?.id || null;
+                if (newWindowId) {
+                  await addLog(`成功创建无痕窗口 (ID: ${newWindowId})。`, 'info');
+                }
+              } catch (windowCreateErr) {
+                console.error('Failed to create incognito window:', windowCreateErr);
+                throw new Error(
+                  '无法创建无痕窗口！请确保已在 Chrome 扩展管理页面 (chrome://extensions) 中为 FlowPilot 勾选“允许在无痕模式下运行”权限，然后重试。'
+                );
+              }
+            }
+
             const keepSettings = {
               ...buildFreshAttemptKeepState(prevState, {
                 targetRun,
@@ -599,6 +632,7 @@
               }),
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               autoRunSessionId: sessionId,
+              automationWindowId: newWindowId, // 绑定新无痕窗口 ID
               tabRegistry: {},
               sourceLastUrls: {},
               ...getAutoRunStatusPayload('running', { currentRun: targetRun, totalRuns, attemptRun, sessionId }),
