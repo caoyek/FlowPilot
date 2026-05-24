@@ -599,51 +599,28 @@
           if (!useExistingProgress) {
             const prevState = attemptState;
 
-            // 1. 关闭之前的无痕窗口（确保是无痕窗口，且不是当前的侧边栏主窗口）
-            const prevWindowId = prevState?.automationWindowId;
-            if (prevWindowId && deps.chrome?.windows?.remove) {
+            // 1. 清除全部 cookies 和浏览数据，确保新一轮在干净环境中启动
+            if (deps.chrome?.browsingData?.remove) {
               try {
-                let isIncognito = false;
-                if (deps.chrome?.windows?.get) {
-                  const prevWindow = await deps.chrome.windows.get(Number(prevWindowId)).catch(() => null);
-                  if (prevWindow) {
-                    isIncognito = Boolean(prevWindow.incognito);
-                  }
-                } else {
-                  // 如果是不支持获取窗口的测试环境，为了安全不进行关闭
-                  isIncognito = false;
-                }
-
-                if (isIncognito) {
-                  await addLog(`正在关闭上一轮的无痕窗口 (ID: ${prevWindowId})...`, 'info');
-                  await deps.chrome.windows.remove(Number(prevWindowId));
-                } else {
-                  console.log('[MultiPage:bg] 忽略关闭非无痕窗口，防止误关主窗口:', prevWindowId);
-                }
-              } catch (windowRemoveErr) {
-                console.warn('Failed to close previous window:', windowRemoveErr);
-              }
-            }
-
-            // 2. 创建一个新的无痕窗口
-            let newWindowId = null;
-            if (deps.chrome?.windows?.create) {
-              try {
-                await addLog(`正在创建新的无痕窗口以开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试...`, 'info');
-                const newWindow = await deps.chrome.windows.create({
-                  incognito: true,
-                  focused: true
+                await addLog(`正在清除全部 cookies 和浏览数据以开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试...`, 'info');
+                await deps.chrome.browsingData.remove({ since: 0 }, {
+                  appcache: true,
+                  cache: true,
+                  cacheStorage: true,
+                  cookies: true,
+                  fileSystems: true,
+                  indexedDB: true,
+                  localStorage: true,
+                  serviceWorkers: true,
+                  webSQL: true,
                 });
-                newWindowId = newWindow?.id || null;
-                if (newWindowId) {
-                  await addLog(`成功创建无痕窗口 (ID: ${newWindowId})。`, 'info');
-                }
-              } catch (windowCreateErr) {
-                console.error('Failed to create incognito window:', windowCreateErr);
-                throw new Error(
-                  '无法创建无痕窗口！请确保已在 Chrome 扩展管理页面 (chrome://extensions) 中为 FlowPilot 勾选“允许在无痕模式下运行”权限，然后重试。'
-                );
+                await addLog('已成功清除全部 cookies 和浏览数据。', 'ok');
+              } catch (clearErr) {
+                console.warn('Failed to clear browsing data:', clearErr);
+                await addLog(`清除浏览数据失败：${clearErr?.message || String(clearErr || '未知错误')}`, 'warn');
               }
+            } else {
+              await addLog('当前浏览器不支持 browsingData API，跳过全量清理。', 'warn');
             }
 
             const keepSettings = {
@@ -656,7 +633,7 @@
               }),
               autoRunRoundSummaries: serializeAutoRunRoundSummaries(totalRuns, roundSummaries),
               autoRunSessionId: sessionId,
-              automationWindowId: newWindowId, // 绑定新无痕窗口 ID
+              automationWindowId: null, // 不再绑定无痕窗口，在正常窗口中运行
               tabRegistry: {},
               sourceLastUrls: {},
               currentNodeId: '', // 强一致性重置：清空当前节点
