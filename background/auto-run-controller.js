@@ -570,9 +570,10 @@
           let useExistingProgress = false;
 
           if (reuseExistingProgress) {
-            let currentState = attemptState;
-            // 强一致性判定：如果是跨轮次启动（例如上一次运行的是前一轮，当前要开启新的一轮），绝对不能复用上一轮残留的状态进度，强制作为全新启动
-            if (currentState && currentState.autoRunCurrentRun && currentState.autoRunCurrentRun !== targetRun) {
+            // 强一致性判定：只有当处于本轮次的后续重试尝试（attemptRun > 1），或者本轮次是用户在侧边栏明确指定启动并继续的初始轮次（targetRun === resumeCurrentRun 且 continueCurrentOnFirstAttempt）时，才允许复用已有进度
+            const isInitialResumeRound = targetRun === resumeCurrentRun && continueCurrentOnFirstAttempt;
+            const isSubsequentAttemptOfRound = attemptRun > 1;
+            if (!isInitialResumeRound && !isSubsequentAttemptOfRound) {
               reuseExistingProgress = false;
             }
           }
