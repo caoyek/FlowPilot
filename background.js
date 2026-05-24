@@ -13215,12 +13215,19 @@ async function runAutoSequenceFromNodeGraph(startNodeId, context = {}) {
           await invalidateDownstreamAfterAutoRunNodeRestart('open-chatgpt', {
             logLabel: `节点 fetch-signup-code 报错后准备回到 open-chatgpt 沿用当前邮箱重试（第 ${step4RestartCount} 次重开）`,
           });
-          const restorePayload = {};
+          const latestState = await getState();
+          const nodeIds = getAutoRunWorkflowNodeIds(latestState);
+          const nodeStatuses = { ...(latestState.nodeStatuses || {}) };
+          for (const nid of nodeIds) {
+            nodeStatuses[nid] = 'pending';
+          }
+          const restorePayload = {
+            nodeStatuses,
+            currentNodeId: 'open-chatgpt',
+          };
           if (preservedEmail) restorePayload.email = preservedEmail;
           if (preservedPassword) restorePayload.password = preservedPassword;
-          if (Object.keys(restorePayload).length) {
-            await setState(restorePayload);
-          }
+          await setState(restorePayload);
         }
         setRestartNode('open-chatgpt');
         restartFromStep1WithCurrentEmail = true;

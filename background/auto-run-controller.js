@@ -620,7 +620,7 @@
             let newWindowId = null;
             if (deps.chrome?.windows?.create) {
               try {
-                await addLog('正在创建新的无痕窗口...', 'info');
+                await addLog(`正在创建新的无痕窗口以开始第 ${targetRun}/${totalRuns} 轮第 ${attemptRun} 次尝试...`, 'info');
                 const newWindow = await deps.chrome.windows.create({
                   incognito: true,
                   focused: true
