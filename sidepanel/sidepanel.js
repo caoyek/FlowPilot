@@ -2963,9 +2963,14 @@ function syncLatestState(nextState) {
     normalizedNextState.activeFlowId = normalizedFlowId;
     normalizedNextState.flowId = normalizedFlowId;
   }
+  let baseNodeStatuses = latestState?.nodeStatuses || {};
+  if (normalizedNextState.nodeStatuses && Object.keys(normalizedNextState.nodeStatuses).length === 0) {
+    // 强一致性重置：若传入的 nodeStatuses 是空对象，说明后台已被彻底清空重置，前台不能继承上一轮的残留状态
+    baseNodeStatuses = {};
+  }
   const mergedNodeStatuses = normalizedNextState?.nodeStatuses
     ? getStoredNodeStatuses({
-      nodeStatuses: { ...NODE_DEFAULT_STATUSES, ...(latestState?.nodeStatuses || {}), ...normalizedNextState.nodeStatuses },
+      nodeStatuses: { ...NODE_DEFAULT_STATUSES, ...baseNodeStatuses, ...normalizedNextState.nodeStatuses },
     })
     : getStoredNodeStatuses(latestState);
 

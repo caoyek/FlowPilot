@@ -411,6 +411,15 @@
           flowState: normalizePlainObject(normalizedUpdates.flows),
         });
       }
+
+      // 强一致性同步：将 updates 顶层的 runtime 关键属性同步更新到 runtimeState 中，防止下次 setState 时因 deepMerge 从旧 runtimeState 中复活残留值
+      const topLevelKeysToSync = ['flowId', 'runId', 'activeFlowId', 'activeRunId', 'currentNodeId', 'nodeStatuses'];
+      for (const key of topLevelKeysToSync) {
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, key)) {
+          nextRuntimeState[key] = cloneValue(normalizedUpdates[key]);
+        }
+      }
+
       return nextRuntimeState;
     }
 

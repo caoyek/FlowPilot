@@ -651,8 +651,12 @@
               tabRegistry: {},
               sourceLastUrls: {},
               currentNodeId: '', // 强一致性重置：清空当前节点
-              nodeStatuses: {}, // 强一致性重置：重置所有节点状态为 pending
-              stepStatuses: {}, // 强一致性重置：重置所有步骤状态为 pending
+              nodeStatuses: Object.fromEntries(
+                Object.keys(prevState?.nodeStatuses || {}).map(id => [id, 'pending'])
+              ), // 强一致性重置：重置所有节点状态为 pending
+              stepStatuses: Object.fromEntries(
+                Object.keys(prevState?.stepStatuses || {}).map(id => [id, 'pending'])
+              ), // 强一致性重置：重置所有步骤状态为 pending
               ...getAutoRunStatusPayload('running', { currentRun: targetRun, totalRuns, attemptRun, sessionId }),
             };
             await resetState();
