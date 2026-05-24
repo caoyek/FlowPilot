@@ -239,13 +239,84 @@
         return;
       }
       try {
-        const accountInfo = normalizeString(state?.email || state?.account || 'unknown_account').replace(/[^a-zA-Z0-9_@.-]/g, '_');
+        const email = normalizeString(state?.email || state?.account || 'unknown_account');
+        const accountInfo = email.replace(/[^a-zA-Z0-9_@.-]/g, '_');
+        const emailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
         const filename = `chatgpt_session_${accountInfo}_${Date.now()}.json`;
-        const payload = JSON.stringify({
-          ...state,
-          ...sessionState,
-          timestamp: new Date().toISOString()
-        }, null, 2);
+        
+        let expiresAtIso = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        let expiresInSec = 30 * 24 * 60 * 60;
+        let chatgptUserId = sessionState?.session?.user?.id || 'unknown';
+        let chatgptAccountId = 'unknown';
+
+        // Try to extract from session
+        if (sessionState?.session?.expires) {
+          try {
+            expiresAtIso = new Date(sessionState.session.expires).toISOString();
+            expiresInSec = Math.floor((new Date(expiresAtIso) - new Date()) / 1000);
+          } catch (e) {}
+        }
+        
+        // Try to decode JWT to get precise exp and other claims
+        if (sessionState?.accessToken) {
+          try {
+            const base64Url = sessionState.accessToken.split('.')[1];
+            if (base64Url) {
+              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+              const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                  return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+              }).join(''));
+              const parsedJwt = JSON.parse(jsonPayload);
+              if (parsedJwt?.exp) {
+                expiresAtIso = new Date(parsedJwt.exp * 1000).toISOString();
+                expiresInSec = Math.floor((new Date(expiresAtIso) - new Date()) / 1000);
+              }
+              if (parsedJwt?.sub) {
+                chatgptUserId = parsedJwt.sub;
+              }
+              if (parsedJwt?.['https://api.openai.com/profile']?.id) {
+                chatgptAccountId = parsedJwt['https://api.openai.com/profile'].id;
+              }
+            }
+          } catch (e) {
+            // ignore jwt parsing error
+          }
+        }
+
+        const exportedAt = new Date().toISOString();
+        
+        const payloadData = {
+          exported_at: exportedAt,
+          proxies: [],
+          accounts: [
+            {
+              name: email,
+              platform: "openai",
+              type: "oauth",
+              concurrency: 10,
+              priority: 1,
+              credentials: {
+                access_token: sessionState?.accessToken || "",
+                chatgpt_account_id: chatgptAccountId,
+                chatgpt_user_id: chatgptUserId,
+                email: email,
+                expires_at: expiresAtIso,
+                expires_in: Math.max(0, expiresInSec),
+                plan_type: state?.plusModeEnabled ? "plus" : "free"
+              },
+              extra: {
+                email: email,
+                email_key: emailKey,
+                name: email,
+                auth_provider: "openai",
+                source: "chatgpt_web_session",
+                last_refresh: exportedAt
+              }
+            }
+          ]
+        };
+
+        const payload = JSON.stringify(payloadData, null, 2);
         
         const payloadBase64 = btoa(unescape(encodeURIComponent(payload)));
         const dataUrl = `data:application/json;base64,${payloadBase64}`;
@@ -263,7 +334,7 @@
             }
           });
         });
-        await addStepLog(visibleStep, `已成功下载 ChatGPT 会话 JSON 到本地：${filename}`, 'ok');
+        await addStepLog(visibleStep, `已成功下载格式化后的 CPA JSON：${filename}`, 'ok');
       } catch (err) {
         await addStepLog(visibleStep, `本地下载 JSON 失败：${err.message || err}`, 'warn');
       }
