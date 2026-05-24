@@ -2881,9 +2881,14 @@ function getSignupPasswordFieldErrorText() {
 }
 
 function isStep5Ready() {
-  return Boolean(
-    document.querySelector('input[name="name"], input[autocomplete="name"], input[name="birthday"], input[name="age"], [role="spinbutton"][data-type="year"]')
-  );
+  const selectors = 'input[name="name"], input[autocomplete="name"], input[name="birthday"], input[name="age"], [role="spinbutton"][data-type="year"]';
+  const elements = document.querySelectorAll(selectors);
+  for (const el of elements) {
+    if (isVisibleElement(el)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function isSignupProfilePageUrl(rawUrl = location.href) {
@@ -2997,6 +3002,11 @@ function isStep5CompletionChatgptUrl(rawUrl = location.href) {
 
 function getStep4PostVerificationState(options = {}) {
   const { ignoreVerificationVisibility = false } = options;
+
+  if (typeof isPhoneVerificationPageReady === 'function' && isPhoneVerificationPageReady()) {
+    return null;
+  }
+
   // Newer auth flows can briefly render profile fields before the email-verification
   // form fully exits. Do not advance to Step 5 while verification UI is still present.
   if (!ignoreVerificationVisibility && isVerificationPageStillVisible()) {
