@@ -590,12 +590,27 @@
           if (!useExistingProgress) {
             const prevState = attemptState;
 
-            // 1. 关闭之前的无痕窗口（如果有保存的 automationWindowId）
+            // 1. 关闭之前的无痕窗口（确保是无痕窗口，且不是当前的侧边栏主窗口）
             const prevWindowId = prevState?.automationWindowId;
             if (prevWindowId && deps.chrome?.windows?.remove) {
               try {
-                await addLog(`正在关闭上一轮的窗口 (ID: ${prevWindowId})...`, 'info');
-                await deps.chrome.windows.remove(Number(prevWindowId));
+                let isIncognito = false;
+                if (deps.chrome?.windows?.get) {
+                  const prevWindow = await deps.chrome.windows.get(Number(prevWindowId)).catch(() => null);
+                  if (prevWindow) {
+                    isIncognito = Boolean(prevWindow.incognito);
+                  }
+                } else {
+                  // 如果是不支持获取窗口的测试环境，为了安全不进行关闭
+                  isIncognito = false;
+                }
+
+                if (isIncognito) {
+                  await addLog(`正在关闭上一轮的无痕窗口 (ID: ${prevWindowId})...`, 'info');
+                  await deps.chrome.windows.remove(Number(prevWindowId));
+                } else {
+                  console.log('[MultiPage:bg] 忽略关闭非无痕窗口，防止误关主窗口:', prevWindowId);
+                }
               } catch (windowRemoveErr) {
                 console.warn('Failed to close previous window:', windowRemoveErr);
               }
