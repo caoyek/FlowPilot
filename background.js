@@ -10829,6 +10829,8 @@ const AUTO_RUN_STEP_IDLE_LOG_TIMEOUT_MS = 5 * 60 * 1000;
 const AUTO_RUN_STEP_IDLE_LOG_CHECK_INTERVAL_MS = 5000;
 const AUTO_RUN_STEP_IDLE_RESTART_MAX_ATTEMPTS = 3;
 const AUTO_RUN_STEP_IDLE_RESTART_ERROR_PREFIX = 'AUTO_RUN_STEP_IDLE_RESTART::';
+const AUTO_RUN_BACKGROUND_COMPLETION_SETTLE_TIMEOUT_MS = 10000;
+const AUTO_RUN_BACKGROUND_COMPLETION_SETTLE_POLL_MS = 100;
 const AUTO_RUN_BACKGROUND_COMPLETED_STEPS = new Set([1, 2, 4, 6, 7, 8, 9]);
 const STEP_COMPLETION_SIGNAL_STEPS = new Set([3, 5, 10, 12]);
 const AUTO_RUN_BACKGROUND_COMPLETED_STEP_KEYS = new Set([
@@ -11630,6 +11632,42 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   }
   let completionPayload = null;
 
+  const isBackgroundCompletionSettledStatus = (status) => {
+    const normalizedStatus = String(status || '').trim();
+    return isStepDoneStatus(normalizedStatus)
+      || normalizedStatus === 'failed'
+      || normalizedStatus === 'stopped';
+  };
+
+  const waitForBackgroundCompletionSettlement = async (nodeExecutionState = {}) => {
+    const timeoutMs = Math.max(
+      AUTO_RUN_BACKGROUND_COMPLETION_SETTLE_POLL_MS,
+      Number(getNodeCompletionSignalTimeoutMs(normalizedNodeId, nodeExecutionState))
+      || AUTO_RUN_BACKGROUND_COMPLETION_SETTLE_TIMEOUT_MS
+    );
+    const startedAt = Date.now();
+    let lastStatus = '';
+
+    while (Date.now() - startedAt < timeoutMs) {
+      throwIfStopped();
+      const latestState = await getState();
+      lastStatus = String(latestState?.nodeStatuses?.[normalizedNodeId] || 'pending').trim() || 'pending';
+      if (isBackgroundCompletionSettledStatus(lastStatus)) {
+        return lastStatus;
+      }
+      await sleepWithStop(AUTO_RUN_BACKGROUND_COMPLETION_SETTLE_POLL_MS);
+    }
+
+    const latestState = await getState();
+    lastStatus = String(latestState?.nodeStatuses?.[normalizedNodeId] || 'pending').trim() || 'pending';
+    if (isBackgroundCompletionSettledStatus(lastStatus)) {
+      return lastStatus;
+    }
+    throw new Error(
+      `自动运行：节点 ${normalizedNodeId} 执行函数已返回，但 ${Math.round(timeoutMs / 1000)} 秒内仍未完成后台收尾，当前状态：${lastStatus}。`
+    );
+  };
+
   let executionState = await getState();
   if (typeof assertNodeExecutionAllowedForState === 'function') {
     assertNodeExecutionAllowedForState(normalizedNodeId, executionState, '自动执行节点');
@@ -11658,8 +11696,12 @@ async function executeNodeAndWait(nodeId, delayAfter = 2000) {
   if (doesNodeUseBackgroundCompletion(normalizedNodeId, executionState)) {
     await addLog(`自动运行：节点 ${normalizedNodeId} 由后台流程负责收尾，执行函数返回后将直接进入下一步。`, 'info');
     await executeNode(normalizedNodeId);
+    const settledStatus = await waitForBackgroundCompletionSettlement(executionState);
     const latestState = await getState();
     await addLog(`自动运行：节点 ${normalizedNodeId} 已执行返回，当前状态为 ${latestState.nodeStatuses?.[normalizedNodeId] || 'pending'}，准备继续后续节点。`, 'info');
+    if (!isStepDoneStatus(settledStatus)) {
+      throw new Error(`自动运行：节点 ${normalizedNodeId} 后台收尾未成功结束，当前状态：${settledStatus}。`);
+    }
   } else if (doesNodeUseCompletionSignal(normalizedNodeId, executionState)) {
     const completionSignalTimeoutMs = getNodeCompletionSignalTimeoutMs(normalizedNodeId, executionState);
     await addLog(`自动运行：节点 ${normalizedNodeId} 已发起，正在等待完成信号（超时 ${Math.round(completionSignalTimeoutMs / 1000)} 秒）。`, 'info');
